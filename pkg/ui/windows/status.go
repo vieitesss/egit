@@ -3,17 +3,19 @@ package ui
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/vieitesss/egit/pkg/cmd"
-	"github.com/vieitesss/egit/pkg/ui/msgs"
 	comp "github.com/vieitesss/egit/pkg/ui/component"
+	"github.com/vieitesss/egit/pkg/ui/msgs"
 )
 
 type Window comp.Component
 
 type StatusWindow struct {
 	Window
+	viewport viewport.Model
 	Renderer *lipgloss.Style
 	Width    int
 	Height   int
@@ -22,6 +24,8 @@ type StatusWindow struct {
 }
 
 func (m StatusWindow) Init() tea.Cmd {
+	m.viewport = viewport.New()
+
 	return func() tea.Msg {
 		out, err := cmd.GitCmdOut("status", "--porcelain")
 		return msgs.StatusCmdMsg{
@@ -42,8 +46,11 @@ func (m StatusWindow) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
 		m.Width = msg.Width
 		m.Height = msg.Height
 
+		m.viewport.SetWidth(m.Width - 2)
+		m.viewport.SetHeight(m.Height - 2)
+
 	case tea.KeyPressMsg:
-		m, cmd = m.handleKeyPress(msg.String())
+		m, cmd = m.handleKeyPress(msg)
 		cmds = append(cmds, cmd)
 
 	case msgs.StatusCmdMsg:
@@ -51,18 +58,22 @@ func (m StatusWindow) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
 			m.Content = fmt.Sprintf("Error executing command: %v", msg.Err.Error())
 		}
 		m.Content = msg.Out
+		m.viewport.SetContent(m.Content)
 	}
 
 	return m, tea.Batch(cmds...)
 }
 
-func (m StatusWindow) handleKeyPress(s string) (StatusWindow, tea.Cmd) {
-	switch s {
+func (m StatusWindow) handleKeyPress(msg tea.KeyPressMsg) (StatusWindow, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg.String() {
 	case "q":
 		return m, tea.Quit
 	}
 
-	return m, nil
+	m.viewport, cmd = m.viewport.Update(msg)
+	return m, cmd
 }
 
 func (m StatusWindow) View() string {
@@ -76,7 +87,7 @@ func (m StatusWindow) View() string {
 		Height(m.Height).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(color).
-		Render(m.Content)
+		Render(m.viewport.View())
 }
 
 func (m StatusWindow) IsFocused() bool {
