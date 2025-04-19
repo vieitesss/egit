@@ -35,14 +35,10 @@ func (m StatusWindow) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.Width = msg.Width
-		m.Height = msg.Height
-
-		m.viewport.SetWidth(m.Width - 2)
-		m.viewport.SetHeight(m.Height - 2)
+		m.updateWindowSize(msg.Width, msg.Height)
 
 	case tea.KeyPressMsg:
-		m, cmd = m.handleKeyPress(msg)
+		cmd = m.handleKeyPress(msg)
 		cmds = append(cmds, cmd)
 
 	case msgs.StatusCmdMsg:
@@ -56,16 +52,16 @@ func (m StatusWindow) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m StatusWindow) handleKeyPress(msg tea.KeyPressMsg) (StatusWindow, tea.Cmd) {
+func (m *StatusWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg.String() {
 	case "q":
-		return m, tea.Quit
+		return tea.Quit
 	}
 
 	m.viewport, cmd = m.viewport.Update(msg)
-	return m, cmd
+	return cmd
 }
 
 func (m StatusWindow) View() string {
