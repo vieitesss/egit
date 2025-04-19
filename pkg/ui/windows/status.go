@@ -1,4 +1,4 @@
-package ui
+package windows
 
 import (
 	"fmt"
@@ -11,16 +11,8 @@ import (
 	"github.com/vieitesss/egit/pkg/ui/msgs"
 )
 
-type Window comp.Component
-
 type StatusWindow struct {
 	Window
-	viewport viewport.Model
-	Renderer *lipgloss.Style
-	Width    int
-	Height   int
-	Focus    bool
-	Content  string
 }
 
 func (m StatusWindow) Init() tea.Cmd {
@@ -92,4 +84,8 @@ func (m StatusWindow) View() string {
 
 func (m StatusWindow) IsFocused() bool {
 	return m.Focus
+}
+
+func (m StatusWindow) Size() (int, int) {
+	return m.Width, m.Height
 }

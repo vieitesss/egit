@@ -1,4 +1,4 @@
-package ui
+package windows
 
 import (
 	"testing"
@@ -15,9 +15,11 @@ func TestStatusWindowUpdate(t *testing.T) {
 	}
 
 	ren := &lipgloss.Style{}
-	w := StatusWindow{Renderer: ren, Focus: true}
+	w := Window{Renderer: ren, Focus: true}
+	sw := StatusWindow{w}
 
-	switch u, _ := w.Update(sizeMsg); u := u.(type) {
+
+	switch u, _ := sw.Update(sizeMsg); u := u.(type) {
 	case StatusWindow:
 		assert.Equal(t, 16, u.Width)
 		assert.Equal(t, 9, u.Height)

@@ -6,14 +6,13 @@ import (
 	comp "github.com/vieitesss/egit/pkg/ui/component"
 )
 
-type Container interface {
-	comp.Component
-	getViewComponents() string
-	getWindowSizeDimensions(cmps, w, h int) (width, height int)
+type Container struct {
+	base      baseContainer
+	joiner    func([]string) string
+	dimension func(count, w, h int) (int, int)
 }
 
 type baseContainer struct {
-	self       Container
 	Renderer   *lipgloss.Style
 	Components []comp.Component
 	Width      int
@@ -21,133 +20,115 @@ type baseContainer struct {
 	focused    int
 }
 
-type Column struct {
-	baseContainer
-}
-
-type Row struct {
-	baseContainer
-}
-
-func NewColumn(ren *lipgloss.Style, c ...comp.Component) Column {
-	col := Column{newBaseContainer(ren, c...)}
-	col.self = &col
-	return col
-}
-
-func NewRow(ren *lipgloss.Style, c ...comp.Component) Row {
-	row := Row{newBaseContainer(ren, c...)}
-	row.self = &row
-	return row
-}
-
-func newBaseContainer(ren *lipgloss.Style, c ...comp.Component) baseContainer {
-	var cmps []comp.Component
-	focus := -1
-
-	for i, cmp := range c {
-		if ok := cmp.IsFocused(); ok {
-			focus = i
-		}
-		cmps = append(cmps, cmp)
-	}
-
-	return baseContainer{
+func newBaseContainer(ren *lipgloss.Style, cmps ...comp.Component) baseContainer {
+	b := baseContainer{
 		Renderer:   ren,
-		Components: cmps,
-		focused:    focus,
+		Components: make([]comp.Component, len(cmps)),
+		focused:    -1,
 	}
+	for i, c := range cmps {
+		b.Components[i] = c
+		if c.IsFocused() {
+			b.focused = i
+		}
+	}
+	return b
 }
 
-func (m *baseContainer) updateAll(update bool, msg tea.Msg) tea.Cmd {
-	var (
-		cmds []tea.Cmd
-		cmd  tea.Cmd
-	)
+func (m baseContainer) updateAll(doUpdate bool, msg tea.Msg) (baseContainer, tea.Cmd) {
+	var cmds []tea.Cmd
 
-	if update {
+	if doUpdate {
 		for i, c := range m.Components {
-			m.Components[i], cmd = c.Update(msg)
-			cmds = append(cmds, cmd)
+			updated, cmd := c.Update(msg)
+			m.Components[i] = updated
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
 		}
 	} else {
 		for _, c := range m.Components {
-			cmd = c.Init()
-			cmds = append(cmds, cmd)
+			cmds = append(cmds, c.Init())
 		}
-	}
-
-	return tea.Batch(cmds...)
-}
-
-func (m baseContainer) Init() tea.Cmd {
-	return m.updateAll(false, nil)
-}
-
-func (m baseContainer) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
-	var (
-		cmds []tea.Cmd
-		cmd tea.Cmd
-	)
-
-
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.Width = msg.Width
-		m.Height = msg.Height
-
-		cmps := len(m.Components)
-		for i, c := range m.Components {
-			width, height := m.self.getWindowSizeDimensions(cmps, m.Width, m.Height)
-			m.Components[i], cmd = c.Update(tea.WindowSizeMsg{
-				Width:  width,
-				Height: height,
-			})
-			cmds = append(cmds, cmd)
-		}
-
-	case tea.KeyPressMsg:
-		m.Components[m.focused], cmd = m.Components[m.focused].Update(msg)
-		cmds = append(cmds, cmd)
-
-	default:
-		return m, m.updateAll(true, msg)
 	}
 
 	return m, tea.Batch(cmds...)
 }
 
-func (m baseContainer) View() string {
-	return m.Renderer.
-		Width(m.Width).
-		Height(m.Height).
-		Render(m.self.getViewComponents())
-}
-
-func (m baseContainer) IsFocused() bool {
-	return m.focused != -1
-}
-
-func (m Column) getViewComponents() string {
-	var views []string
-	for _, c := range m.Components {
-		views = append(views, c.View())
+func NewColumn(ren *lipgloss.Style, cmps ...comp.Component) Container {
+	return Container{
+		base:      newBaseContainer(ren, cmps...),
+		joiner:    func(vs []string) string { return lipgloss.JoinVertical(0, vs...) },
+		dimension: func(n, w, h int) (int, int) { return w, h / n },
 	}
-	return lipgloss.JoinVertical(0, views...)
 }
 
-func (m Row) getViewComponents() string {
-	var views []string
-	for _, c := range m.Components {
-		views = append(views, c.View())
+func NewRow(ren *lipgloss.Style, cmps ...comp.Component) Container {
+	return Container{
+		base:      newBaseContainer(ren, cmps...),
+		joiner:    func(vs []string) string { return lipgloss.JoinHorizontal(0, vs...) },
+		dimension: func(n, w, h int) (int, int) { return w / n, h },
 	}
-	return lipgloss.JoinHorizontal(0, views...)
 }
 
-func (m Column) getWindowSizeDimensions(cmps, w, h int) (width, height int) {
-	return w, h / cmps
+func (m Container) Init() tea.Cmd {
+	var cmd tea.Cmd
+	m.base, cmd = m.base.updateAll(false, nil)
+	return cmd
 }
 
-func (m Row) getWindowSizeDimensions(cmps, w, h int) (width, height int) {
-	return w / cmps, h
+func (m Container) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
+	var (
+		cmds []tea.Cmd
+		cmd  tea.Cmd
+	)
+
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.base.Width, m.base.Height = msg.Width, msg.Height
+		n := len(m.base.Components)
+		for i, child := range m.base.Components {
+			w, h := m.dimension(n, msg.Width, msg.Height)
+			m.base.Components[i], cmd = child.Update(tea.WindowSizeMsg{Width: w, Height: h})
+			cmds = append(cmds, cmd)
+		}
+
+	case tea.KeyMsg:
+		if m.base.focused >= 0 && m.base.focused < len(m.base.Components) {
+			m.base.Components[m.base.focused], cmd = m.base.Components[m.base.focused].Update(msg)
+			cmds = append(cmds, cmd)
+		}
+
+	default:
+		m.base, cmd = m.base.updateAll(true, msg)
+		cmds = append(cmds, cmd)
+	}
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m Container) View() string {
+	return m.base.
+		Renderer.
+		Width(m.base.Width).
+		Height(m.base.Height).
+		Render(m.getViewComponents())
+}
+
+func (m Container) Size() (int, int) {
+	return m.base.Width, m.base.Height
+}
+
+func (m Container) IsFocused() bool {
+	return m.base.focused != -1
+}
+
+func (m Container) getViewComponents() string {
+	var vs []string
+
+	for _, child := range m.base.Components {
+		vs = append(vs, child.View())
+	}
+
+	return m.joiner(vs)
 }

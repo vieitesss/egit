@@ -9,4 +9,5 @@ type Component interface {
 	Update(msg tea.Msg) (Component, tea.Cmd)
 	View() string
 	IsFocused() bool
+	Size() (int, int)
 }

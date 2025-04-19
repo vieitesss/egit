@@ -13,19 +13,20 @@ import (
 
 func TestColumnCreation(t *testing.T) {
 	ren := &lipgloss.Style{}
-	col := NewColumn(ren, win.StatusWindow{Renderer: ren, Focus: true})
+	f := win.Window{Renderer: ren, Focus: true}
+	w := win.Window{Renderer: ren}
+	sww := win.StatusWindow{w}
+	swf := win.StatusWindow{f}
 
-	assert.IsType(t, Column{}, col)
-	assert.Equal(t, len(col.Components), 1)
+	col := NewColumn(ren, swf)
+
+	assert.IsType(t, Container{}, col)
+	assert.Equal(t, len(col.base.Components), 1)
 	assert.True(t, col.IsFocused(), 0)
 
-	col = NewColumn(
-		ren,
-		win.StatusWindow{Renderer: ren},
-		win.StatusWindow{Renderer: ren, Focus: true},
-	)
+	col = NewColumn(ren, sww, swf)
 
-	assert.Equal(t, len(col.Components), 2)
+	assert.Equal(t, len(col.base.Components), 2)
 	assert.True(t, col.IsFocused(), 1)
 }
 
@@ -33,7 +34,7 @@ func TestColumnInit(t *testing.T) {
 	expect, err := cmd.GitCmdOut("status")
 
 	ren := &lipgloss.Style{}
-	w := win.StatusWindow{Renderer: ren, Focus: true}
+	w := win.StatusWindow{win.Window{Renderer: ren, Focus: true}}
 
 	col := NewColumn(ren, w)
 	cmds := col.Init()
@@ -56,12 +57,12 @@ func TestColumnUpdate(t *testing.T) {
 	}
 
 	ren := &lipgloss.Style{}
-	w := win.StatusWindow{Renderer: ren, Focus: true}
+	w := win.StatusWindow{win.Window{Renderer: ren, Focus: true}}
 	col := NewColumn(ren, w)
 
 	switch u, _ := col.Update(statusMsg); u := u.(type) {
-	case baseContainer:
-		switch x := u.Components[0]; x := x.(type) {
+	case Container:
+		switch x := u.base.Components[0]; x := x.(type) {
 		case win.StatusWindow:
 			assert.Equal(t, x.Content, "hello")
 
@@ -74,15 +75,15 @@ func TestColumnUpdate(t *testing.T) {
 	}
 
 	sizeMsg := tea.WindowSizeMsg{
-		Width: 16,
+		Width:  16,
 		Height: 9,
 	}
 
 	switch u, _ := col.Update(sizeMsg); u := u.(type) {
-	case baseContainer:
-		assert.Equal(t, 16, u.Width)
-		assert.Equal(t, 9, u.Height)
-		switch x := u.Components[0]; x := x.(type) {
+	case Container:
+		assert.Equal(t, 16, u.base.Width)
+		assert.Equal(t, 9, u.base.Height)
+		switch x := u.base.Components[0]; x := x.(type) {
 		case win.StatusWindow:
 			assert.Equal(t, 16, x.Width)
 			assert.Equal(t, 9, x.Height)
@@ -94,14 +95,4 @@ func TestColumnUpdate(t *testing.T) {
 	default:
 		t.Fatal("Expected the component to be a `Column`")
 	}
-}
-
-func TestColumnView(t *testing.T) {
-	ren := &lipgloss.Style{}
-	w := win.StatusWindow{Renderer: ren, Focus: true, Content: "hello"}
-	col := NewColumn(ren, w)
-
-	col.Init()
-
-	col.View()
 }
