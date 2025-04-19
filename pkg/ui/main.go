@@ -18,8 +18,20 @@ type Egit struct {
 func DefaultLayout(ren *lipgloss.Style) comp.Component {
 	return cont.NewColumn(
 		ren,
-		win.StatusWindow{Renderer: ren, Focus: true},
-		win.StatusWindow{Renderer: ren},
+		cont.NewRow(
+			ren,
+			cont.NewColumn(
+				ren,
+				win.StatusWindow{Renderer: ren, Focus: true},
+				win.StatusWindow{Renderer: ren},
+				win.StatusWindow{Renderer: ren},
+			),
+			cont.NewColumn(
+				ren,
+				win.StatusWindow{Renderer: ren},
+				win.StatusWindow{Renderer: ren},
+			),
+		),
 		win.StatusWindow{Renderer: ren},
 	)
 }

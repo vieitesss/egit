@@ -27,7 +27,7 @@ func (m StatusWindow) Init() tea.Cmd {
 	m.viewport = viewport.New()
 
 	return func() tea.Msg {
-		out, err := cmd.GitCmdOut("status", "--porcelain")
+		out, err := cmd.GitCmdOut("status")
 		return msgs.StatusCmdMsg{
 			Out: out,
 			Err: err,
