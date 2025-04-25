@@ -4,38 +4,39 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	comp "github.com/vieitesss/egit/pkg/ui/component"
+	win "github.com/vieitesss/egit/pkg/ui/windows"
 )
 
+type ContainerType interface {
+	Joiner([]string) string
+	Dimension(count, w, h int) (int, int)
+}
+
 type Container struct {
-	base      baseContainer
-	joiner    func([]string) string
-	dimension func(count, w, h int) (int, int)
+	comp.Component
+	Type        ContainerType
+	Components  []comp.ComponentI
+	CompFocused int
 }
 
-type baseContainer struct {
-	Renderer   *lipgloss.Style
-	Components []comp.Component
-	Width      int
-	Height     int
-	focused    int
-}
-
-func newBaseContainer(ren *lipgloss.Style, cmps ...comp.Component) baseContainer {
-	b := baseContainer{
-		Renderer:   ren,
-		Components: make([]comp.Component, len(cmps)),
-		focused:    -1,
+func newContainer(ren *lipgloss.Style, cmps ...comp.ComponentI) Container {
+	con := Container{
+		Component:   comp.Component{Renderer: ren},
+		Components:  make([]comp.ComponentI, len(cmps)),
+		CompFocused: -1,
 	}
+
 	for i, c := range cmps {
-		b.Components[i] = c
+		con.Components[i] = c
 		if c.IsFocused() {
-			b.focused = i
+			con.CompFocused = i
 		}
 	}
-	return b
+
+	return con
 }
 
-func (m baseContainer) updateAll(doUpdate bool, msg tea.Msg) (baseContainer, tea.Cmd) {
+func (m Container) updateAll(doUpdate bool, msg tea.Msg) (Container, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if doUpdate {
@@ -55,29 +56,13 @@ func (m baseContainer) updateAll(doUpdate bool, msg tea.Msg) (baseContainer, tea
 	return m, tea.Batch(cmds...)
 }
 
-func NewColumn(ren *lipgloss.Style, cmps ...comp.Component) Container {
-	return Container{
-		base:      newBaseContainer(ren, cmps...),
-		joiner:    func(vs []string) string { return lipgloss.JoinVertical(0, vs...) },
-		dimension: func(n, w, h int) (int, int) { return w, h / n },
-	}
-}
-
-func NewRow(ren *lipgloss.Style, cmps ...comp.Component) Container {
-	return Container{
-		base:      newBaseContainer(ren, cmps...),
-		joiner:    func(vs []string) string { return lipgloss.JoinHorizontal(0, vs...) },
-		dimension: func(n, w, h int) (int, int) { return w / n, h },
-	}
-}
-
 func (m Container) Init() tea.Cmd {
 	var cmd tea.Cmd
-	m.base, cmd = m.base.updateAll(false, nil)
+	m, cmd = m.updateAll(false, nil)
 	return cmd
 }
 
-func (m Container) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
+func (m Container) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {
 	var (
 		cmds []tea.Cmd
 		cmd  tea.Cmd
@@ -85,22 +70,22 @@ func (m Container) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.base.Width, m.base.Height = msg.Width, msg.Height
-		n := len(m.base.Components)
-		for i, child := range m.base.Components {
-			w, h := m.dimension(n, msg.Width, msg.Height)
-			m.base.Components[i], cmd = child.Update(tea.WindowSizeMsg{Width: w, Height: h})
+		m.Width, m.Height = msg.Width, msg.Height
+		n := len(m.Components)
+		for i, child := range m.Components {
+			w, h := m.Type.Dimension(n, m.Width, m.Height)
+			m.Components[i], cmd = child.Update(tea.WindowSizeMsg{Width: w, Height: h})
 			cmds = append(cmds, cmd)
 		}
 
 	case tea.KeyMsg:
-		if m.base.focused >= 0 && m.base.focused < len(m.base.Components) {
-			m.base.Components[m.base.focused], cmd = m.base.Components[m.base.focused].Update(msg)
+		if m.CompFocused >= 0 && m.CompFocused < len(m.Components) {
+			m.Components[m.CompFocused], cmd = m.Components[m.CompFocused].Update(msg)
 			cmds = append(cmds, cmd)
 		}
 
 	default:
-		m.base, cmd = m.base.updateAll(true, msg)
+		m, cmd = m.updateAll(true, msg)
 		cmds = append(cmds, cmd)
 	}
 
@@ -108,27 +93,39 @@ func (m Container) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
 }
 
 func (m Container) View() string {
-	return m.base.
+	return m.
 		Renderer.
-		Width(m.base.Width).
-		Height(m.base.Height).
+		Width(m.Width).
+		Height(m.Height).
 		Render(m.getViewComponents())
 }
 
 func (m Container) Size() (int, int) {
-	return m.base.Width, m.base.Height
+	return m.Width, m.Height
 }
 
 func (m Container) IsFocused() bool {
-	return m.base.focused != -1
+	return m.CompFocused != -1
 }
 
 func (m Container) getViewComponents() string {
 	var vs []string
 
-	for _, child := range m.base.Components {
+	for _, child := range m.Components {
 		vs = append(vs, child.View())
 	}
 
-	return m.joiner(vs)
+	return m.Type.Joiner(vs)
+}
+
+func (m Container) GetFixedHeight() int {
+	var fixed int
+	for _, c := range m.Components {
+		switch c := c.(type) {
+		case win.Window:
+			fixed += c.MaxHeight
+		}
+	}
+
+	return fixed
 }

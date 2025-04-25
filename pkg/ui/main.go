@@ -12,29 +12,27 @@ type Egit struct {
 	renderer *lipgloss.Style
 	width    int
 	height   int
-	layout   comp.Component
+	layout   comp.ComponentI
 }
 
-func DefaultLayout(ren *lipgloss.Style) comp.Component {
-	w := win.Window{Renderer: ren}
-	f := win.Window{Renderer: ren, Focus: true}
+func DefaultLayout(ren *lipgloss.Style) comp.ComponentI {
 	return cont.NewColumn(
 		ren,
 		cont.NewRow(
 			ren,
 			cont.NewColumn(
 				ren,
-				win.StatusWindow{f},
-				win.StatusWindow{w},
-				win.StatusWindow{w},
+				win.NewWindow(ren, &win.StatusWindow{}, true, 0),
+				win.NewWindow(ren, &win.StatusWindow{}, false, 0),
+				win.NewWindow(ren, &win.StatusWindow{}, false, 0),
 			),
 			cont.NewColumn(
 				ren,
-				win.StatusWindow{w},
-				win.StatusWindow{w},
+				win.NewWindow(ren, &win.StatusWindow{}, false, 0),
+				win.NewWindow(ren, &win.StatusWindow{}, false, 0),
 			),
 		),
-		win.StatusWindow{w},
+		win.NewWindow(ren, &win.StatusWindow{}, false, 3),
 	)
 }
 
