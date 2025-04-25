@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/vieitesss/egit/pkg/cmd"
 	comp "github.com/vieitesss/egit/pkg/ui/component"
 	"github.com/vieitesss/egit/pkg/ui/msgs"
 )
@@ -18,13 +17,7 @@ type StatusWindow struct {
 func (m StatusWindow) Init() tea.Cmd {
 	m.viewport = viewport.New()
 
-	return func() tea.Msg {
-		out, err := cmd.GitCmdOut("status")
-		return msgs.StatusCmdMsg{
-			Out: out,
-			Err: err,
-		}
-	}
+	return m.runGitCmdOut("status")
 }
 
 func (m StatusWindow) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
@@ -41,10 +34,17 @@ func (m StatusWindow) Update(msg tea.Msg) (comp.Component, tea.Cmd) {
 		cmd = m.handleKeyPress(msg)
 		cmds = append(cmds, cmd)
 
-	case msgs.StatusCmdMsg:
+	case msgs.GitCmdOutMsg:
+		if !m.Focus && m.Loaded {
+			return m, nil
+		}
+
+		m.Loaded = true
+
 		if msg.Err != nil {
 			m.Content = fmt.Sprintf("Error executing command: %v", msg.Err.Error())
 		}
+
 		m.Content = msg.Out
 		m.viewport.SetContent(m.Content)
 	}

@@ -1,6 +1,6 @@
 package msgs
 
-type StatusCmdMsg struct{
+type GitCmdOutMsg struct {
 	Out string
 	Err error
 }
