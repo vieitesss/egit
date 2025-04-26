@@ -62,6 +62,38 @@ func (m Container) Init() tea.Cmd {
 	return cmd
 }
 
+func (m *Container) updateSize(w, h int) tea.Cmd {
+	var (
+		cmds []tea.Cmd
+		cmd  tea.Cmd
+	)
+
+	m.Width, m.Height = w, h
+	n := len(m.Components)
+
+	tiledHeight := h - m.GetFixedHeight()
+	elemsToTile := n
+	for _, e := range m.Components {
+		if w, ok := e.(win.Window); ok && w.MaxHeight > 0 {
+			elemsToTile--
+		}
+	}
+
+	remainSpace := tiledHeight % elemsToTile
+
+	for i, child := range m.Components {
+		width, height := m.Type.Dimension(elemsToTile, w, tiledHeight)
+		if c, ok := child.(win.Window); ok && c.MaxHeight == 0 && remainSpace > 0 {
+			height += 1
+			remainSpace -= 1
+		}
+		m.Components[i], cmd = child.Update(tea.WindowSizeMsg{Width: width, Height: height})
+		cmds = append(cmds, cmd)
+	}
+
+	return tea.Batch(cmds...)
+}
+
 func (m Container) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {
 	var (
 		cmds []tea.Cmd
@@ -70,13 +102,7 @@ func (m Container) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.Width, m.Height = msg.Width, msg.Height
-		n := len(m.Components)
-		for i, child := range m.Components {
-			w, h := m.Type.Dimension(n, m.Width, m.Height)
-			m.Components[i], cmd = child.Update(tea.WindowSizeMsg{Width: w, Height: h})
-			cmds = append(cmds, cmd)
-		}
+		cmds = append(cmds, m.updateSize(msg.Width, msg.Height))
 
 	case tea.KeyMsg:
 		if m.CompFocused >= 0 && m.CompFocused < len(m.Components) {
@@ -121,8 +147,7 @@ func (m Container) getViewComponents() string {
 func (m Container) GetFixedHeight() int {
 	var fixed int
 	for _, c := range m.Components {
-		switch c := c.(type) {
-		case win.Window:
+		if c, ok := c.(win.Window); ok {
 			fixed += c.MaxHeight
 		}
 	}

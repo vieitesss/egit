@@ -12,11 +12,11 @@ type StatusWindow struct {
 	content string
 }
 
-func (m *StatusWindow) Init() tea.Cmd {
+func (m StatusWindow) Init() tea.Cmd {
 	return runGitCmdOut("status")
 }
 
-func (m *StatusWindow) Update(msg tea.Msg) tea.Cmd {
+func (m StatusWindow) Update(msg tea.Msg) (WindowType, tea.Cmd) {
 	var (
 		cmds []tea.Cmd
 		cmd  tea.Cmd
@@ -35,10 +35,10 @@ func (m *StatusWindow) Update(msg tea.Msg) tea.Cmd {
 		m.content = msg.Out
 	}
 
-	return tea.Batch(cmds...)
+	return m, tea.Batch(cmds...)
 }
 
-func (m *StatusWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
+func (m StatusWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg.String() {

@@ -11,7 +11,7 @@ type ComponentI interface {
 	View() string
 	IsFocused() bool
 	Size() (int, int)
-	FixedHeight() int
+	GetFixedHeight() int
 }
 
 type Component struct {
@@ -29,6 +29,6 @@ func (c Component) Size() (int, int) {
 	return c.Width, c.Height
 }
 
-func (c Component) FixedHeight() int {
-	return c.Height
+func (c Component) GetFixedHeight() int {
+	return 0
 }

@@ -10,7 +10,7 @@ import (
 
 type WindowType interface {
 	Init() tea.Cmd
-	Update(tea.Msg) tea.Cmd
+	Update(tea.Msg) (WindowType, tea.Cmd)
 	Content() string
 }
 
@@ -26,9 +26,9 @@ func NewWindow(ren *lipgloss.Style, winType WindowType, focus bool, maxHeight in
 	return Window{
 		Component: comp.Component{
 			Renderer: ren,
-			Focus: focus,
+			Focus:    focus,
 		},
-		Type: winType,
+		Type:      winType,
 		MaxHeight: maxHeight,
 	}
 }
@@ -36,6 +36,9 @@ func NewWindow(ren *lipgloss.Style, winType WindowType, focus bool, maxHeight in
 func (m *Window) updateWindowSize(w, h int) {
 	m.Width = w
 	m.Height = h
+	if m.MaxHeight > 0 && m.MaxHeight < h {
+		m.Height = m.MaxHeight
+	}
 
 	m.viewport.SetWidth(m.Width - 2)
 	m.viewport.SetHeight(m.Height - 2)
@@ -50,7 +53,7 @@ func (m Window) Init() tea.Cmd {
 func (m Window) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {
 	var (
 		cmds []tea.Cmd
-		cmd tea.Cmd
+		cmd  tea.Cmd
 	)
 
 	switch msg := msg.(type) {
@@ -64,7 +67,7 @@ func (m Window) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {
 		m.Loaded = true
 	}
 
-	cmd = m.Type.Update(msg)
+	m.Type, cmd = m.Type.Update(msg)
 	cmds = append(cmds, cmd)
 
 	m.viewport.SetContent(m.Type.Content())
@@ -86,4 +89,8 @@ func (m Window) View() string {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(color).
 		Render(m.viewport.View())
+}
+
+func (m Window) GetFixedHeight() int {
+	return m.MaxHeight
 }
