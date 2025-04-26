@@ -63,26 +63,36 @@ func (m Container) Init() tea.Cmd {
 }
 
 func (m *Container) updateSize(w, h int) tea.Cmd {
-	var (
-		cmds []tea.Cmd
-		cmd  tea.Cmd
-	)
-
 	m.Width, m.Height = w, h
-	n := len(m.Components)
 
-	tiledHeight := h - m.GetFixedHeight()
-	elemsToTile := n
+	tiledHeight, elemsToTile := m.tileParams()
+	cmds := m.updateChildrenSize(tiledHeight, elemsToTile)
+
+	return cmds
+}
+
+func (m Container) tileParams() (int, int) {
+	tiledHeight := m.Height - m.GetFixedHeight()
+	elemsToTile := len(m.Components)
 	for _, e := range m.Components {
 		if w, ok := e.(win.Window); ok && w.MaxHeight > 0 {
 			elemsToTile--
 		}
 	}
 
+	return tiledHeight, elemsToTile
+}
+
+func (m *Container) updateChildrenSize(tiledHeight, elemsToTile int) tea.Cmd {
+	var (
+		cmds []tea.Cmd
+		cmd  tea.Cmd
+	)
+
 	remainSpace := tiledHeight % elemsToTile
 
 	for i, child := range m.Components {
-		width, height := m.Type.Dimension(elemsToTile, w, tiledHeight)
+		width, height := m.Type.Dimension(elemsToTile, m.Width, tiledHeight)
 		if c, ok := child.(win.Window); ok && c.MaxHeight == 0 && remainSpace > 0 {
 			height += 1
 			remainSpace -= 1
