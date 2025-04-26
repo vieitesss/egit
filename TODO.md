@@ -1,4 +1,7 @@
 # TODO
 
-- Adjust window sizes. 
+- Default window handling.
 - Different commands.
+  - branch
+- Movement between windows.
+- Help for each window.

@@ -7,21 +7,21 @@ import (
 	"github.com/vieitesss/egit/pkg/ui/msgs"
 )
 
-type StatusWindow struct {
+type LogWindow struct {
 	content string
 }
 
-type statusCmdMsg msgs.GitCmdOutMsg
+type logCmdMsg msgs.GitCmdOutMsg
 
-var runStatusCmd = MakeGitRunner(func(out string, err error) tea.Msg {
-	return statusCmdMsg{Out: out, Err: err}
+var runLogCmd = MakeGitRunner(func(out string, err error) tea.Msg {
+	return logCmdMsg{Out: out, Err: err}
 })
 
-func (m StatusWindow) Init() tea.Cmd {
-	return runStatusCmd("status", "--porcelain")
+func (m LogWindow) Init() tea.Cmd {
+	return runLogCmd("log", "--format='%h %s'")
 }
 
-func (m StatusWindow) Update(msg tea.Msg) (WindowType, tea.Cmd) {
+func (m LogWindow) Update(msg tea.Msg) (WindowType, tea.Cmd) {
 	var (
 		cmds []tea.Cmd
 		cmd  tea.Cmd
@@ -32,7 +32,7 @@ func (m StatusWindow) Update(msg tea.Msg) (WindowType, tea.Cmd) {
 		cmd = m.handleKeyPress(msg)
 		cmds = append(cmds, cmd)
 
-	case statusCmdMsg:
+	case logCmdMsg:
 		if msg.Err != nil {
 			m.content = fmt.Sprintf("Error executing command: %v", msg.Err.Error())
 		}
@@ -43,7 +43,7 @@ func (m StatusWindow) Update(msg tea.Msg) (WindowType, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m StatusWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
+func (m LogWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg.String() {
@@ -54,6 +54,6 @@ func (m StatusWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 	return cmd
 }
 
-func (m StatusWindow) Content() string {
+func (m LogWindow) Content() string {
 	return m.content
 }
