@@ -8,6 +8,7 @@ import (
 )
 
 type StatusWindow struct {
+	loaded bool
 	content string
 }
 
@@ -18,7 +19,7 @@ var runStatusCmd = MakeGitRunner(func(out string, err error) tea.Msg {
 })
 
 func (m StatusWindow) Init() tea.Cmd {
-	return runStatusCmd("status", "--porcelain")
+	return runStatusCmd("status", "--short")
 }
 
 func (m StatusWindow) Update(msg tea.Msg) (WindowType, tea.Cmd) {
@@ -33,6 +34,10 @@ func (m StatusWindow) Update(msg tea.Msg) (WindowType, tea.Cmd) {
 		cmds = append(cmds, cmd)
 
 	case statusCmdMsg:
+		if !m.loaded {
+			m.loaded = true
+		}
+
 		if msg.Err != nil {
 			m.content = fmt.Sprintf("Error executing command: %v", msg.Err.Error())
 		}
@@ -47,8 +52,10 @@ func (m StatusWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg.String() {
-	case "q":
-		return tea.Quit
+	case "a":
+		return runStatusCmd("status")
+	case "r":
+		return runStatusCmd("status", "--short")
 	}
 
 	return cmd
@@ -56,4 +63,8 @@ func (m StatusWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 
 func (m StatusWindow) Content() string {
 	return m.content
+}
+
+func (m StatusWindow) IsLoaded() bool {
+	return m.loaded
 }

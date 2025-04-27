@@ -8,6 +8,7 @@ import (
 )
 
 type LogWindow struct {
+	loaded bool
 	content string
 }
 
@@ -47,8 +48,6 @@ func (m LogWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg.String() {
-	case "q":
-		return tea.Quit
 	}
 
 	return cmd
@@ -56,4 +55,8 @@ func (m LogWindow) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 
 func (m LogWindow) Content() string {
 	return m.content
+}
+
+func (m LogWindow) IsLoaded() bool {
+	return m.loaded
 }
