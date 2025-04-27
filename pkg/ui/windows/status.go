@@ -14,7 +14,7 @@ type StatusWindow struct {
 
 type statusCmdMsg msgs.GitCmdOutMsg
 
-var runStatusCmd = MakeGitRunner(func(out string, err error) tea.Msg {
+var runStatusCmd = makeGitRunner(func(out string, err error) tea.Msg {
 	return statusCmdMsg{Out: out, Err: err}
 })
 

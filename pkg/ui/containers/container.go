@@ -62,15 +62,6 @@ func (m Container) Init() tea.Cmd {
 	return cmd
 }
 
-func (m *Container) updateSize(w, h int) tea.Cmd {
-	m.Width, m.Height = w, h
-
-	tiledHeight, elemsToTile := m.tileParams()
-	cmds := m.updateChildrenSize(tiledHeight, elemsToTile)
-
-	return cmds
-}
-
 func (m Container) tileParams() (int, int) {
 	tiledHeight := m.Height - m.GetFixedHeight()
 	elemsToTile := len(m.Components)
@@ -102,6 +93,15 @@ func (m *Container) updateChildrenSize(tiledHeight, elemsToTile int) tea.Cmd {
 	}
 
 	return tea.Batch(cmds...)
+}
+
+func (m *Container) updateSize(w, h int) tea.Cmd {
+	m.Width, m.Height = w, h
+
+	tiledHeight, elemsToTile := m.tileParams()
+	cmds := m.updateChildrenSize(tiledHeight, elemsToTile)
+
+	return cmds
 }
 
 func (m Container) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {

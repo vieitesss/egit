@@ -22,8 +22,8 @@ func DefaultLayout(ren *lipgloss.Style) comp.ComponentI {
 			ren,
 			cont.NewColumn(
 				ren,
-				win.NewWindow(ren, win.StatusWindow{}, true, 3),
-				win.NewWindow(ren, win.StatusWindow{}, false, 0),
+				win.NewWindow(ren, win.BranchWindow{}, false, 3),
+				win.NewWindow(ren, win.StatusWindow{}, true, 0),
 				win.NewWindow(ren, win.LogWindow{}, false, 0),
 			),
 			cont.NewColumn(

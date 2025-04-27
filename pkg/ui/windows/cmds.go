@@ -5,7 +5,7 @@ import (
 	"github.com/vieitesss/egit/pkg/cmd"
 )
 
-func MakeGitRunner(wrap func(out string, err error) tea.Msg) func(args ...string) tea.Cmd {
+func makeGitRunner(wrap func(out string, err error) tea.Msg) func(args ...string) tea.Cmd {
 	return func(args ...string) tea.Cmd {
 		out, err := cmd.GitCmdOut(args...)
 		return func() tea.Msg {
