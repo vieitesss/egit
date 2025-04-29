@@ -7,7 +7,7 @@ import (
 
 type Row struct{}
 
-func NewRow(ren *lipgloss.Style, cmps ...comp.ComponentI) Container {
+func NewRow(ren *lipgloss.Style, cmps ...comp.ComponentI) *Container {
 	cont := newContainer(ren, cmps...)
 	cont.Type = Row{}
 	return cont

@@ -21,14 +21,14 @@ type Component struct {
 	Focus    bool
 }
 
-func (c Component) IsFocused() bool {
+func (c *Component) IsFocused() bool {
 	return c.Focus
 }
 
-func (c Component) Size() (int, int) {
+func (c *Component) Size() (int, int) {
 	return c.Width, c.Height
 }
 
-func (c Component) GetFixedHeight() int {
+func (c *Component) GetFixedHeight() int {
 	return 0
 }

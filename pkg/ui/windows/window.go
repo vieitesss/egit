@@ -21,8 +21,8 @@ type Window struct {
 	MaxHeight int
 }
 
-func NewWindow(ren *lipgloss.Style, winType WindowType, focus bool, maxHeight int) Window {
-	return Window{
+func NewWindow(ren *lipgloss.Style, winType WindowType, focus bool, maxHeight int) *Window {
+	return &Window{
 		Component: comp.Component{
 			Renderer: ren,
 			Focus:    focus,
@@ -43,7 +43,7 @@ func (m *Window) updateWindowSize(w, h int) {
 	m.viewport.SetHeight(m.Height - 2)
 }
 
-func (m Window) Init() tea.Cmd {
+func (m *Window) Init() tea.Cmd {
 	m.viewport = viewport.New()
 
 	return m.Type.Init()
@@ -58,7 +58,7 @@ func defaultKeyPresses(msg tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
-func (m Window) propagate(msg tea.Msg) (Window, tea.Cmd) {
+func (m *Window) propagate(msg tea.Msg) (*Window, tea.Cmd) {
 	var (
 		cmds []tea.Cmd
 		cmd  tea.Cmd
@@ -74,7 +74,7 @@ func (m Window) propagate(msg tea.Msg) (Window, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Window) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {
+func (m *Window) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.updateWindowSize(msg.Width, msg.Height)
@@ -98,7 +98,7 @@ func (m Window) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {
 	return m.propagate(msg)
 }
 
-func (m Window) View() string {
+func (m *Window) View() string {
 	color := lipgloss.White
 	if m.IsFocused() {
 		color = lipgloss.Yellow
@@ -112,6 +112,6 @@ func (m Window) View() string {
 		Render(m.viewport.View())
 }
 
-func (m Window) GetFixedHeight() int {
+func (m *Window) GetFixedHeight() int {
 	return m.MaxHeight
 }

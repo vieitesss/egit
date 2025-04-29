@@ -7,7 +7,7 @@ import (
 
 type Column struct{}
 
-func NewColumn(ren *lipgloss.Style, cmps ...comp.ComponentI) Container {
+func NewColumn(ren *lipgloss.Style, cmps ...comp.ComponentI) *Container {
 	cont := newContainer(ren, cmps...)
 	cont.Type = Column{}
 	return cont
