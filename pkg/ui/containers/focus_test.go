@@ -207,3 +207,29 @@ func TestUpdateFocus(t *testing.T){
 	trace := focusTrace([]int{}, l)
 	assert.Equal(t, []int{0, 1}, trace)
 }
+
+func TestNewTraceDown(t *testing.T) {
+	ren := &lipgloss.Style{}
+	l := NewColumn(
+		ren,
+		NewRow(
+			ren,
+			NewColumn(
+				ren,
+				win.NewWindow(ren, win.BranchWindow{}, false, 3),
+				win.NewWindow(ren, win.StatusWindow{}, false, 0),
+				win.NewWindow(ren, win.LogWindow{}, true, 0),
+			),
+			NewColumn(
+				ren,
+				win.NewWindow(ren, win.StatusWindow{}, false, 0),
+				win.NewWindow(ren, win.StatusWindow{}, false, 0),
+			),
+		),
+	)
+
+	trace := focusTrace([]int{}, l)
+	newTrace := l.getNewTraceDown(trace)
+
+	assert.Equal(t, []int{0, 1}, newTrace)
+}

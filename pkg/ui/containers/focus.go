@@ -43,6 +43,9 @@ func (m *Container) getLastContainer(trace []int) Container {
 	for ok {
 		head = h
 		i++
+		if i == n {
+			break
+		}
 		h, ok = head.Components[trace[i]].(*Container)
 	}
 
@@ -127,22 +130,38 @@ func (m *Container) updateFocus(newTrace []int) {
 	}
 
 	c.removeFocus(currentTrace[i:])
-
-	if c.CompFocused != -1 {
-		panic("updateFocus: removeFocus did not work")
-	}
-
 	c.setFocus(newTrace[i:])
+}
 
-	currentTrace = focusTrace([]int{}, m)
-	if !reflect.DeepEqual(currentTrace, newTrace) {
-		panic("updateFocus: update did not work")
+func (m Container) windows() []int {
+	var wins []int
+
+	for _, c := range m.Components {
+		if i, ok := c.(*win.Window); ok {
+			wins = append(wins, i)
+		}
 	}
+
+	return wins
+}
+
+func (m *Container) getNewTraceDown(trace []int) []int {
+	n := len(trace)
+	if n == 0 {
+		panic("getNewTraceDown: trace len should be at least one")
+	}
+
+	c := m.getLastContainer(trace)
+	wins := c.windows()
+	newFocus := trace[n-1]+1
+
+	panic("TODO: check type of c.Components[newFocus], if exists")
+
+	return m.getNewTraceDown(trace[:n-1])
 }
 
 func (m *Container) changeFocus(msg tea.KeyMsg) {
 	trace := focusTrace([]int{}, m)
-	n := len(trace)
 
 	switch msg.String() {
 	case "left":
@@ -152,11 +171,8 @@ func (m *Container) changeFocus(msg tea.KeyMsg) {
 		// }
 	case "right":
 	case "down":
-		c := m.getLastContainer(trace)
-		if len(c.Components) > trace[n-1]+1 {
-			newTrace := append(trace[:n-1], trace[n-1]+1)
-			m.updateFocus(newTrace)
-		}
+		newTrace := m.getNewTraceDown(trace)
+		m.updateFocus(newTrace)
 	case "up":
 
 	default:
