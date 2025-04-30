@@ -9,7 +9,7 @@ import (
 	win "github.com/vieitesss/egit/pkg/ui/windows"
 )
 
-func focusTrace(trace []int, head comp.ComponentI) []int {
+func currentFocusTrace(trace []int, head comp.ComponentI) []int {
 	var (
 		h  *Container
 		ok bool
@@ -24,55 +24,34 @@ func focusTrace(trace []int, head comp.ComponentI) []int {
 	}
 
 	trace = append(trace, h.CompFocused)
-	return focusTrace(trace, h.Components[h.CompFocused])
+	return currentFocusTrace(trace, h.Components[h.CompFocused])
 }
 
-func (m *Container) removeFocus(trace []int) {
+func (m *Container) setFocus(trace []int, focus bool) {
 	if len(trace) == 0 {
-		panic("removeFocus: trace len should be at least 1")
+		panic("updateFocus: trace len should be at least 1")
 	}
 
-	m.CompFocused = -1
 	current := trace[0]
+	if focus {
+		m.CompFocused = current
+	} else {
+		m.CompFocused = -1
+	}
 
 	w, ok := m.Components[current].(*win.Window)
 	if ok {
-		if !w.Focus {
-			panic("removeFocus: the window should be focused")
+		if w.Focus == focus {
+			panic("updateFocus: the window focus state is already set to the requested value")
 		}
-		w.Focus = false
+		w.Focus = focus
 		m.Components[current] = w
 		return
 	}
 
 	c, _ := m.Components[current].(*Container)
-	c.removeFocus(trace[1:])
+	c.setFocus(trace[1:], focus)
 	m.Components[current] = c
-	return
-}
-
-func (m *Container) setFocus(trace []int) {
-	if len(trace) == 0 {
-		panic("setFocus: newTrace len should be at least 1")
-	}
-
-	current := trace[0]
-	m.CompFocused = current
-
-	w, ok := m.Components[current].(*win.Window)
-	if ok {
-		if w.Focus {
-			panic("setFocus: the window should not be focused")
-		}
-		w.Focus = true
-		m.Components[current] = w
-		return
-	}
-
-	c, _ := m.Components[current].(*Container)
-	c.setFocus(trace[1:])
-	m.Components[current] = c
-	return
 }
 
 func (m *Container) updateFocus(newTrace []int) {
@@ -80,7 +59,7 @@ func (m *Container) updateFocus(newTrace []int) {
 		panic("updateFocus: newTrace len should be at least 1")
 	}
 
-	currentTrace := focusTrace([]int{}, m)
+	currentTrace := currentFocusTrace([]int{}, m)
 
 	if len(currentTrace) == 0 {
 		panic("updateFocus: currentTrace len should be at least 1")
@@ -102,8 +81,8 @@ func (m *Container) updateFocus(newTrace []int) {
 		i++
 	}
 
-	c.removeFocus(currentTrace[i:])
-	c.setFocus(newTrace[i:])
+	c.setFocus(currentTrace[i:], false)
+	c.setFocus(newTrace[i:], true)
 }
 
 func (m *Container) lastComponent(trace []int) comp.ComponentI {
@@ -178,7 +157,7 @@ func (m *Container) changeToNextRow(trace []int) (bool, []int) {
 }
 
 func (m *Container) getNewTraceDown() []int {
-	trace := focusTrace([]int{}, m)
+	trace := currentFocusTrace([]int{}, m)
 	n := len(trace)
 
 	if n == 0 {

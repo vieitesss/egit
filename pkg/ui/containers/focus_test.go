@@ -22,7 +22,7 @@ func TestTrace(t *testing.T) {
 		),
 	)
 
-	trace := focusTrace([]int{}, l)
+	trace := currentFocusTrace([]int{}, l)
 	assert.Equal(t, []int{0, 0, 1}, trace)
 
 	l = NewColumn(
@@ -40,7 +40,7 @@ func TestTrace(t *testing.T) {
 		),
 	)
 
-	trace = focusTrace([]int{}, l)
+	trace = currentFocusTrace([]int{}, l)
 	assert.Equal(t, []int{0, 1, 0}, trace)
 
 	l = NewColumn(
@@ -61,7 +61,7 @@ func TestTrace(t *testing.T) {
 		win.NewWindow(ren, win.LogWindow{}, false, 0),
 	)
 
-	trace = focusTrace([]int{}, l)
+	trace = currentFocusTrace([]int{}, l)
 	assert.Equal(t, []int{0, 0, 0, 0, 0}, trace)
 
 	l = NewColumn(
@@ -73,7 +73,7 @@ func TestTrace(t *testing.T) {
 		win.NewWindow(ren, win.StatusWindow{}, true, 3),
 	)
 
-	trace = focusTrace([]int{}, l)
+	trace = currentFocusTrace([]int{}, l)
 	assert.Equal(t, []int{1}, trace)
 
 	l = NewColumn(
@@ -92,7 +92,7 @@ func TestTrace(t *testing.T) {
 		win.NewWindow(ren, win.StatusWindow{}, false, 3),
 	)
 
-	assert.Panics(t, func() { focusTrace([]int{}, l) })
+	assert.Panics(t, func() { currentFocusTrace([]int{}, l) })
 
 }
 
@@ -111,8 +111,8 @@ func TestSetFocus(t *testing.T) {
 		win.NewWindow(ren, win.StatusWindow{}, false, 0),
 	)
 
-	l.setFocus([]int{0, 0, 1})
-	trace := focusTrace([]int{}, l)
+	l.setFocus([]int{0, 0, 1}, true)
+	trace := currentFocusTrace([]int{}, l)
 	assert.Equal(t, []int{0, 0, 1}, trace)
 
 	l = NewColumn(
@@ -128,8 +128,8 @@ func TestSetFocus(t *testing.T) {
 		win.NewWindow(ren, win.StatusWindow{}, false, 0),
 	)
 
-	l.setFocus([]int{1})
-	trace = focusTrace([]int{}, l)
+	l.setFocus([]int{1}, true)
+	trace = currentFocusTrace([]int{}, l)
 	assert.Equal(t, []int{1}, trace)
 }
 
@@ -141,7 +141,7 @@ func TestRemoveFocus(t *testing.T) {
 		win.NewWindow(ren, win.StatusWindow{}, true, 0),
 	)
 
-	l.removeFocus([]int{1})
+	l.setFocus([]int{1}, false)
 	assert.Equal(t, -1, l.CompFocused)
 	w, _ := l.Components[1].(*win.Window)
 	assert.False(t, w.Focus)
@@ -159,7 +159,7 @@ func TestRemoveFocus(t *testing.T) {
 		),
 	)
 
-	l.removeFocus([]int{0, 0, 1})
+	l.setFocus([]int{0, 0, 1}, false)
 	assert.Equal(t, -1, l.CompFocused)
 	c1, _ := l.Components[0].(*Container)
 	assert.Equal(t, -1, c1.CompFocused)
@@ -168,8 +168,8 @@ func TestRemoveFocus(t *testing.T) {
 	w, _ = c2.Components[1].(*win.Window)
 	assert.False(t, w.Focus)
 
-	assert.Panics(t, func() { l.removeFocus([]int{}) })
-	assert.Panics(t, func() { l.removeFocus([]int{0, 1}) })
+	assert.Panics(t, func() { l.setFocus([]int{}, false) })
+	assert.Panics(t, func() { l.setFocus([]int{0, 1}, false) })
 }
 
 func TestUpdateFocus(t *testing.T) {
@@ -188,7 +188,7 @@ func TestUpdateFocus(t *testing.T) {
 	)
 
 	l.updateFocus([]int{0, 1})
-	trace := focusTrace([]int{}, l)
+	trace := currentFocusTrace([]int{}, l)
 	assert.Equal(t, []int{0, 1}, trace)
 }
 
