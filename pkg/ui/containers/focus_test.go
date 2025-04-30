@@ -47,6 +47,27 @@ func TestTrace(t *testing.T) {
 		ren,
 		NewRow(
 			ren,
+			NewColumn(
+				ren,
+				NewRow(
+					ren,
+					NewColumn(
+						ren,
+						win.NewWindow(ren, win.LogWindow{}, true, 0),
+					),
+				),
+			),
+		),
+		win.NewWindow(ren, win.LogWindow{}, false, 0),
+	)
+
+	trace = focusTrace([]int{}, l)
+	assert.Equal(t, []int{0, 0, 0, 0, 0}, trace)
+
+	l = NewColumn(
+		ren,
+		NewRow(
+			ren,
 			win.NewWindow(ren, win.BranchWindow{}, false, 3),
 		),
 		win.NewWindow(ren, win.StatusWindow{}, true, 3),
@@ -72,6 +93,7 @@ func TestTrace(t *testing.T) {
 	)
 
 	assert.Panics(t, func() { focusTrace([]int{}, l) })
+
 }
 
 func TestSetFocus(t *testing.T) {
@@ -109,44 +131,6 @@ func TestSetFocus(t *testing.T) {
 	l.setFocus([]int{1})
 	trace = focusTrace([]int{}, l)
 	assert.Equal(t, []int{1}, trace)
-}
-
-func TestGetContainer(t *testing.T) {
-	ren := &lipgloss.Style{}
-	l := NewColumn(
-		ren,
-		NewRow(
-			ren,
-			NewColumn(
-				ren,
-				win.NewWindow(ren, win.BranchWindow{}, false, 3),
-				win.NewWindow(ren, win.StatusWindow{}, true, 0),
-			),
-			win.NewWindow(ren, win.BranchWindow{}, false, 3),
-		),
-	)
-
-	trace := []int{0, 0, 0}
-	elem := l.getLastContainer(trace)
-	assert.IsType(t, Column{}, elem.Type)
-	assert.Equal(t, 2, len(elem.Components))
-
-	trace = []int{0, 1}
-	elem = l.getLastContainer(trace)
-	assert.IsType(t, Row{}, elem.Type)
-	assert.Equal(t, 2, len(elem.Components))
-
-	trace = []int{0}
-	elem = l.getLastContainer(trace)
-	assert.IsType(t, Column{}, elem.Type)
-	assert.Equal(t, *l, elem)
-	assert.Equal(t, 1, len(elem.Components))
-
-	trace = []int{}
-	assert.Panics(t, func() { l.getLastContainer(trace) })
-
-	trace = []int{0, 2}
-	assert.Panics(t, func() { l.getLastContainer(trace) })
 }
 
 func TestRemoveFocus(t *testing.T) {
@@ -188,7 +172,7 @@ func TestRemoveFocus(t *testing.T) {
 	assert.Panics(t, func() { l.removeFocus([]int{0, 1}) })
 }
 
-func TestUpdateFocus(t *testing.T){
+func TestUpdateFocus(t *testing.T) {
 	ren := &lipgloss.Style{}
 	l := NewColumn(
 		ren,
@@ -228,8 +212,141 @@ func TestNewTraceDown(t *testing.T) {
 		),
 	)
 
-	trace := focusTrace([]int{}, l)
-	newTrace := l.getNewTraceDown(trace)
+	newTrace := l.getNewTraceDown()
+	assert.Equal(t, []int{0, 0, 2}, newTrace)
 
-	assert.Equal(t, []int{0, 1}, newTrace)
+	l = NewColumn(
+		ren,
+		NewRow(
+			ren,
+			NewColumn(
+				ren,
+				win.NewWindow(ren, win.LogWindow{}, true, 0),
+			),
+		),
+		NewRow(
+			ren,
+			NewColumn(
+				ren,
+				NewRow(
+					ren,
+					NewColumn(
+						ren,
+						win.NewWindow(ren, win.LogWindow{}, false, 0),
+					),
+				),
+			),
+		),
+	)
+
+	newTrace = l.getNewTraceDown()
+	assert.Equal(t, []int{1, 0, 0, 0, 0}, newTrace)
+
+	l = NewColumn(
+		ren,
+		NewRow(
+			ren,
+			NewColumn(
+				ren,
+				win.NewWindow(ren, win.LogWindow{}, true, 0),
+				win.NewWindow(ren, win.LogWindow{}, false, 0),
+			),
+		),
+	)
+
+	newTrace = l.getNewTraceDown()
+	assert.Equal(t, []int{0, 0, 1}, newTrace)
+
+	l = NewColumn(
+		ren,
+		NewRow(
+			ren,
+			NewColumn(
+				ren,
+				NewRow(
+					ren,
+					NewColumn(
+						ren,
+						win.NewWindow(ren, win.LogWindow{}, true, 0),
+					),
+				),
+			),
+		),
+		win.NewWindow(ren, win.LogWindow{}, false, 0),
+	)
+
+	newTrace = l.getNewTraceDown()
+	assert.Equal(t, []int{1}, newTrace)
+
+	l = NewColumn(
+		ren,
+		NewRow(
+			ren,
+			NewColumn(
+				ren,
+				win.NewWindow(ren, win.LogWindow{}, true, 0),
+			),
+		),
+		NewRow(
+			ren,
+			NewColumn(
+				ren,
+				win.NewWindow(ren, win.LogWindow{}, false, 0),
+			),
+		),
+	)
+
+	newTrace = l.getNewTraceDown()
+	assert.Equal(t, []int{1, 0, 0}, newTrace)
+
+	l = NewColumn(
+		ren,
+		NewRow(
+			ren,
+			NewColumn(
+				ren,
+				win.NewWindow(ren, win.StatusWindow{}, true, 0),
+				NewRow(
+					ren,
+					NewColumn(
+						ren,
+						win.NewWindow(ren, win.StatusWindow{}, false, 0),
+						win.NewWindow(ren, win.LogWindow{}, false, 0),
+					),
+				),
+			),
+		),
+	)
+
+	newTrace = l.getNewTraceDown()
+	assert.Equal(t, []int{0, 0, 1, 0, 0}, newTrace)
+}
+
+func TestLastComponent(t *testing.T) {
+	ren := &lipgloss.Style{}
+	l := NewColumn(
+		ren,
+		NewRow(
+			ren,
+			NewColumn(
+				ren,
+				win.NewWindow(ren, win.BranchWindow{}, false, 3),
+				win.NewWindow(ren, win.LogWindow{}, true, 0),
+				win.NewWindow(ren, win.StatusWindow{}, false, 0),
+			),
+			NewColumn(
+				ren,
+				win.NewWindow(ren, win.StatusWindow{}, false, 0),
+				win.NewWindow(ren, win.StatusWindow{}, false, 0),
+			),
+		),
+	)
+
+	c := l.lastComponent([]int{0, 0, 1})
+	assert.IsType(t, &win.Window{}, c)
+
+	c = l.lastComponent([]int{0, 0})
+	assert.IsType(t, &Container{}, c)
+	col, _ := c.(*Container)
+	assert.IsType(t, Column{}, col.Type)
 }

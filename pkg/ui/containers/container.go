@@ -133,7 +133,7 @@ func (m *Container) Update(msg tea.Msg) (comp.ComponentI, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Container) View() string {
+func (m *Container) View() string {
 	return m.
 		Renderer.
 		Width(m.Width).

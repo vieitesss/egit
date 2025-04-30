@@ -1,6 +1,7 @@
 package containers
 
 import (
+	"fmt"
 	"reflect"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -24,32 +25,6 @@ func focusTrace(trace []int, head comp.ComponentI) []int {
 
 	trace = append(trace, h.CompFocused)
 	return focusTrace(trace, h.Components[h.CompFocused])
-}
-
-func (m *Container) getLastContainer(trace []int) Container {
-	n := len(trace)
-	if n == 0 {
-		panic("getContainer: the trace does not have elements")
-	}
-
-	if n < 2 {
-		return *m
-	}
-
-	var i int
-	head := m
-
-	h, ok := head.Components[trace[i]].(*Container)
-	for ok {
-		head = h
-		i++
-		if i == n {
-			break
-		}
-		h, ok = head.Components[trace[i]].(*Container)
-	}
-
-	return *head
 }
 
 func (m *Container) removeFocus(trace []int) {
@@ -112,19 +87,17 @@ func (m *Container) updateFocus(newTrace []int) {
 	}
 
 	if reflect.DeepEqual(currentTrace, newTrace) {
-		panic("updateFocus: newTrace should not be equal to currentTrace")
+		return
 	}
 
 	var i int
 	c := m
 
-	// new := []int{0, 1}
-	// cur := []int{0, 0, 1}
 	for currentTrace[i] == newTrace[i] {
 		if x, ok := c.Components[currentTrace[i]].(*Container); ok {
 			c = x
 		} else {
-			panic("updateFocus: the Container child should be a Container")
+			panic(fmt.Sprintf("updateFocus: the Container child should be a Container [new: %v, current: %v, ind: %d]", newTrace, currentTrace, i))
 		}
 		i++
 	}
@@ -133,49 +106,140 @@ func (m *Container) updateFocus(newTrace []int) {
 	c.setFocus(newTrace[i:])
 }
 
-func (m Container) windows() []int {
-	var wins []int
+func (m *Container) lastComponent(trace []int) comp.ComponentI {
+	c := m
 
-	for _, c := range m.Components {
-		if i, ok := c.(*win.Window); ok {
-			wins = append(wins, i)
+	for _, i := range trace {
+		if child, ok := c.Components[i].(*Container); ok {
+			c = child
+		} else {
+			return c.Components[i]
 		}
 	}
 
-	return wins
+	return c
 }
 
-func (m *Container) getNewTraceDown(trace []int) []int {
+func (m *Container) findFirstWindow() []int {
+	i := []int{0}
+
+	c, ok := m.Components[0].(*Container)
+	for ok {
+		i = append(i, 0)
+		c, ok = c.Components[0].(*Container)
+	}
+
+	return i
+}
+
+func (m *Container) isValidTrace(trace []int) bool {
+	c := m
+
+	for _, i := range trace {
+		if i >= len(c.Components) {
+			return false
+		}
+
+		if _, ok := c.Components[i].(*win.Window); ok {
+			return true
+		}
+
+		c, _ = c.Components[i].(*Container)
+	}
+
+	return true
+}
+
+func (m *Container) changeToNextRow(trace []int) (bool, []int) {
 	n := len(trace)
+
+	if n < 2 {
+		return false, []int{}
+	}
+
+	if _, ok := m.lastComponent(trace).(*Container); !ok {
+		panic("changeToNextRow: the last component should be a Container")
+	}
+
+	if n%2 != 0 {
+		panic("changeToNextRow: the last component should be a Column Container")
+	}
+
+	var newTrace []int
+	newTrace = append(newTrace, trace[:n-1]...)
+	newTrace[n-2]++
+	valid := m.isValidTrace(newTrace)
+
+	if !valid {
+		return m.changeToNextRow(trace[:n-2])
+	}
+
+	return true, newTrace
+}
+
+func (m *Container) getNewTraceDown() []int {
+	trace := focusTrace([]int{}, m)
+	n := len(trace)
+
 	if n == 0 {
 		panic("getNewTraceDown: trace len should be at least one")
 	}
 
-	c := m.getLastContainer(trace)
-	wins := c.windows()
-	newFocus := trace[n-1]+1
+	if _, ok := m.lastComponent(trace).(*Container); ok {
+		panic("getNewTraceDown: the trace should not end in a Container")
+	}
 
-	panic("TODO: check type of c.Components[newFocus], if exists")
+	var (
+		traceTilCont []int
+		newTrace     []int
+		ok           bool
+	)
 
-	return m.getNewTraceDown(trace[:n-1])
+	traceTilCont = append(traceTilCont, trace[:n-1]...)
+	c, _ := m.lastComponent(traceTilCont).(*Container)
+	newFocus := trace[n-1] + 1
+
+	if newFocus == len(c.Components) {
+		ok, newTrace = m.changeToNextRow(traceTilCont)
+
+		if !ok {
+			return trace
+		}
+
+		var com comp.ComponentI
+		com = m.lastComponent(newTrace)
+		if _, ok = com.(*win.Window); ok {
+			return newTrace
+		}
+
+		c, ok = com.(*Container)
+		return append(newTrace, c.findFirstWindow()...)
+	}
+
+	last := c.Components[newFocus]
+
+	if c, ok = last.(*Container); ok {
+		newTrace = append(traceTilCont, newFocus)
+		newTrace = append(newTrace, c.findFirstWindow()...)
+		return newTrace
+	}
+
+	// The next window in the same container
+	return append(traceTilCont, newFocus)
 }
 
 func (m *Container) changeFocus(msg tea.KeyMsg) {
-	trace := focusTrace([]int{}, m)
+	var newTrace []int
 
 	switch msg.String() {
 	case "left":
-		// if n > 1 && trace[n-2] > 0 {
-		// 	trace = append(trace[:n-2], trace[n-2]-1)
-		// 	setFocus(trace, m)
-		// }
 	case "right":
 	case "down":
-		newTrace := m.getNewTraceDown(trace)
-		m.updateFocus(newTrace)
+		newTrace = m.getNewTraceDown()
 	case "up":
 
 	default:
 		panic("changeFocus: msg.String() should be one of 'left', 'right', 'down' or 'up'")
 	}
+	m.updateFocus(newTrace)
 }
